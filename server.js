@@ -6,17 +6,16 @@ const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
-      const io = new Server(server, {
-        cors: {
-        origin: "*", // fejlesztéshez, később szigorítani
-        methods: ["GET","POST"]
-        }
-      });
-
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET","POST"]
+  }
+});
 
 app.use(express.static(path.join(__dirname, "public")));
 
-// egyszerű memória tároló lobbykra
+// memória tároló lobbykra
 const lobbies = {};
 
 io.on("connection", (socket) => {
@@ -32,22 +31,35 @@ io.on("connection", (socket) => {
       };
     }
 
-    lobbies[lobbyCode].users.push({ id: socket.id, name: username });
+    // ellenőrizzük, hogy nincs-e már benne a felhasználó
+    if (!lobbies[lobbyCode].users.some(u => u.id === socket.id)) {
+      lobbies[lobbyCode].users.push({ id: socket.id, name: username });
+    }
 
-    io.to(lobbyCode).emit("lobbyUpdate", lobbies[lobbyCode]);
+    // minden kliens frissítése a lobbyban
+    io.to(lobbyCode).emit("lobbyUpdate", {
+      users: lobbies[lobbyCode].users.map(u => u.name),
+      counter: lobbies[lobbyCode].counter
+    });
   });
 
   socket.on("incrementCounter", (lobbyCode) => {
     if (lobbies[lobbyCode]) {
       lobbies[lobbyCode].counter++;
-      io.to(lobbyCode).emit("lobbyUpdate", lobbies[lobbyCode]);
+      io.to(lobbyCode).emit("lobbyUpdate", {
+        users: lobbies[lobbyCode].users.map(u => u.name),
+        counter: lobbies[lobbyCode].counter
+      });
     }
   });
 
   socket.on("disconnect", () => {
     for (const [code, lobby] of Object.entries(lobbies)) {
       lobby.users = lobby.users.filter(u => u.id !== socket.id);
-      io.to(code).emit("lobbyUpdate", lobby);
+      io.to(code).emit("lobbyUpdate", {
+        users: lobby.users.map(u => u.name),
+        counter: lobby.counter
+      });
     }
     console.log("User disconnected:", socket.id);
   });
