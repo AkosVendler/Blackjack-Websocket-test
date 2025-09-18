@@ -1,59 +1,59 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lobby Számláló</title>
-  <script src="https://cdn.socket.io/4.8.0/socket.io.min.js"></script>
-  <style>
-    body { font-family: Arial; margin: 20px; }
-    ul { padding-left: 20px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lobby példa</title>
+<script src="https://cdn.socket.io/4.8.0/socket.io.min.js"></script>
 </head>
 <body>
-  <h1>Lobby</h1>
-  <label>Neved: <input id="username" placeholder="Sanyi" /></label>
-  <button id="joinBtn">Csatlakozás</button>
+<h1>Lobby csatlakozás</h1>
+<label>Lobby kód: <input id="lobbyCode" placeholder="pl. ABC123"/></label><br/>
+<label>Neved: <input id="username" placeholder="Sanyi"/></label><br/>
+<button id="joinBtn">Csatlakozás</button>
 
-  <div id="lobby" style="display:none">
-    <p>Számláló: <span id="counter">0</span></p>
-    <button id="incrementBtn">+1</button>
+<div id="lobby" style="display:none">
+  <h2>Lobby: <span id="currentLobby"></span></h2>
+  <p>Számláló: <span id="counter">0</span></p>
+  <button id="incrementBtn">+1</button>
+  <h3>Bent lévők:</h3>
+  <ul id="userList"></ul>
+</div>
 
-    <h2>Jelenlévők:</h2>
-    <ul id="userList"></ul>
-  </div>
+<script>
+const socket = io("https://websocket-pzjq.onrender.com", { transports: ["websocket"] });
 
-  <script>
-    const socket = io("https://websocket-pzjq.onrender.com", { transports: ["websocket"] });
-    let username = '';
+const joinBtn = document.getElementById("joinBtn");
+const incrementBtn = document.getElementById("incrementBtn");
+const lobbyDiv = document.getElementById("lobby");
+const currentLobbyEl = document.getElementById("currentLobby");
+const counterEl = document.getElementById("counter");
+const userListEl = document.getElementById("userList");
 
-    const joinBtn = document.getElementById("joinBtn");
-    const incrementBtn = document.getElementById("incrementBtn");
-    const lobbyDiv = document.getElementById("lobby");
-    const counterEl = document.getElementById("counter");
-    const userListEl = document.getElementById("userList");
+joinBtn.addEventListener("click", () => {
+  const lobbyCode = document.getElementById("lobbyCode").value.trim();
+  const username = document.getElementById("username").value.trim() || "Ismeretlen";
 
-    joinBtn.addEventListener("click", () => {
-      username = document.getElementById("username").value.trim() || "Ismeretlen";
-      socket.emit("joinLobby", username);
-      lobbyDiv.style.display = "block";
-      joinBtn.disabled = true;
-      document.getElementById("username").disabled = true;
-    });
+  if (!lobbyCode) { alert("Adj meg egy lobby kódot!"); return; }
 
-    incrementBtn.addEventListener("click", () => {
-      socket.emit("incrementCounter");
-    });
+  socket.emit("joinLobby", { lobbyCode, username });
+  lobbyDiv.style.display = "block";
+  currentLobbyEl.textContent = lobbyCode;
+});
 
-    socket.on("updateLobby", (data) => {
-      counterEl.textContent = data.counter;
-      userListEl.innerHTML = '';
-      data.users.forEach(u => {
-        const li = document.createElement("li");
-        li.textContent = u;
-        userListEl.appendChild(li);
-      });
-    });
-  </script>
+incrementBtn.addEventListener("click", () => {
+  socket.emit("incrementCounter");
+});
+
+socket.on("lobbyUpdate", data => {
+  counterEl.textContent = data.counter;
+  userListEl.innerHTML = "";
+  data.users.forEach(name => {
+    const li = document.createElement("li");
+    li.textContent = name;
+    userListEl.appendChild(li);
+  });
+});
+</script>
 </body>
 </html>
