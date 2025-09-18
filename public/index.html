@@ -77,6 +77,19 @@
       const name = (nameInput.value || '').trim() || 'Ismeretlen';
       if(!lobby){ alert('Adj meg egy lobby kódot!'); return; }
 
+      const socket = io(SOCKET_URL, {
+        autoConnect: false,
+        transports: ["websocket"] // csak websocket
+      });
+      const io = new Server(server, {
+        cors: {
+        origin: "*", // fejlesztéshez, később szigorítani
+        methods: ["GET","POST"]
+        }
+      });
+
+
+
       // connect if needed
       if(!socket.connected) socket.connect();
 
